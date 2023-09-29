@@ -166,8 +166,10 @@ beforeAll(async () => {
             await createTicket(enrollment.id, ticketType.id, TicketStatus.PAID);
 
             const hotelInfo = await createHotel();
+            const hotelInfo2 = await createHotel();
             for (let i = 0; i < Number(faker.random.numeric()); i++){
                 await createRoom(hotelInfo.id, i+1);
+                await createRoom(hotelInfo2.id, i+1);
             }
 
             const response = await server.get('/hotels').set('Authorization', `Bearer ${token}`);
@@ -316,6 +318,24 @@ describe('GET /hotels/:hotelId', () => {
             const response = await server.get('/hotels/1').set('Authorization', `Bearer ${token}`);
             expect(response.status).toEqual(httpStatus.PAYMENT_REQUIRED);
         })
+
+        it('should respond with status 404 when there is no hotel with the id passed', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          const enrollment = await createEnrollmentWithAddress(user);
+          const ticketType = await prisma.ticketType.create({
+              data: {
+                name: faker.name.findName(),
+                price: faker.datatype.number(),
+                isRemote: false,
+                includesHotel: true
+              },
+            });
+          await createTicket(enrollment.id, ticketType.id, TicketStatus.PAID);
+
+          const response = await server.get(`/hotels/1`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toEqual(httpStatus.NOT_FOUND);
+      })
 
         it('should respond with status 200 and a list the specif hotel rooms', async () => {
             const user = await createUser();
